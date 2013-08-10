@@ -1,5 +1,5 @@
 /*!
- * jQuery JavaScript Library v1.10.0 -wrap,-css,-event-alias,-ajax,-ajax/script,-ajax/jsonp,-ajax/xhr,-effects,-offset,-dimensions,-deprecated
+ * jQuery JavaScript Library v1.10.1 -wrap,-css,-event-alias,-ajax,-ajax/script,-ajax/jsonp,-ajax/xhr,-effects,-offset,-dimensions,-deprecated
  * http://jquery.com/
  *
  * Includes Sizzle.js
@@ -9,7 +9,7 @@
  * Released under the MIT license
  * http://jquery.org/license
  *
- * Date: 2013-08-10T10:52Z
+ * Date: 2013-08-10T10:53Z
  */
 (function( window, undefined ) {
 
@@ -46,7 +46,7 @@ var
 	// List of deleted data cache ids, so we can reuse them
 	core_deletedIds = [],
 
-	core_version = "1.10.0 -wrap,-css,-event-alias,-ajax,-ajax/script,-ajax/jsonp,-ajax/xhr,-effects,-offset,-dimensions,-deprecated",
+	core_version = "1.10.1 -wrap,-css,-event-alias,-ajax,-ajax/script,-ajax/jsonp,-ajax/xhr,-effects,-offset,-dimensions,-deprecated",
 
 	// Save a reference to some core methods
 	core_concat = core_deletedIds.concat,
@@ -1007,7 +1007,7 @@ rootjQuery = jQuery(document);
  * Released under the MIT license
  * http://jquery.org/license
  *
- * Date: 2013-05-15
+ * Date: 2013-05-27
  */
 (function( window, undefined ) {
 
@@ -1492,7 +1492,8 @@ support = Sizzle.support = {};
  * @returns {Object} Returns the current document
  */
 setDocument = Sizzle.setDocument = function( node ) {
-	var doc = node ? node.ownerDocument || node : preferredDoc;
+	var doc = node ? node.ownerDocument || node : preferredDoc,
+		parent = doc.parentWindow;
 
 	// If no document and documentElement is available, return
 	if ( doc === document || doc.nodeType !== 9 || !doc.documentElement ) {
@@ -1505,6 +1506,15 @@ setDocument = Sizzle.setDocument = function( node ) {
 
 	// Support tests
 	documentIsHTML = !isXML( doc );
+
+	// Support: IE>8
+	// If iframe document is assigned to "document" variable and if iframe has been reloaded,
+	// IE will throw "permission denied" error when accessing "document" variable, see jQuery #13936
+	if ( parent && parent.frameElement ) {
+		parent.attachEvent( "onbeforeunload", function() {
+			setDocument();
+		});
+	}
 
 	/* Attributes
 	---------------------------------------------------------------------- */
@@ -3951,7 +3961,6 @@ jQuery.extend({
 			startLength--;
 		}
 
-		hooks.cur = fn;
 		if ( fn ) {
 
 			// Add a progress sentinel to prevent the fx queue from being
@@ -6836,7 +6845,7 @@ function buildParams( prefix, obj, traditional, add ) {
 		add( prefix, obj );
 	}
 }
-if ( typeof module === "object" && typeof module.exports === "object" ) {
+if ( typeof module === "object" && module && typeof module.exports === "object" ) {
 	// Expose jQuery as module.exports in loaders that implement the Node
 	// module pattern (including browserify). Do not create the global, since
 	// the user will be storing it themselves locally, and globals are frowned
