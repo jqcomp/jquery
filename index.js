@@ -1,5 +1,5 @@
 /*!
- * jQuery JavaScript Library v2.0.0 -sizzle,-wrap,-css,-event-alias,-ajax,-ajax/script,-ajax/jsonp,-ajax/xhr,-effects,-offset,-dimensions,-deprecated
+ * jQuery JavaScript Library v2.0.1 -sizzle,-wrap,-css,-event-alias,-ajax,-ajax/script,-ajax/jsonp,-ajax/xhr,-effects,-offset,-dimensions,-deprecated
  * http://jquery.com/
  *
  * Includes Sizzle.js
@@ -9,7 +9,7 @@
  * Released under the MIT license
  * http://jquery.org/license
  *
- * Date: 2013-08-10
+ * Date: 2013-08-10T10:51Z
  */
 (function( window, undefined ) {
 
@@ -46,7 +46,7 @@ var
 	// List of deleted data cache ids, so we can reuse them
 	core_deletedIds = [],
 
-	core_version = "2.0.0 -sizzle,-wrap,-css,-event-alias,-ajax,-ajax/script,-ajax/jsonp,-ajax/xhr,-effects,-offset,-dimensions,-deprecated",
+	core_version = "2.0.1 -sizzle,-wrap,-css,-event-alias,-ajax,-ajax/script,-ajax/jsonp,-ajax/xhr,-effects,-offset,-dimensions,-deprecated",
 
 	// Save a reference to some core methods
 	core_concat = core_deletedIds.concat,
@@ -72,7 +72,7 @@ var
 	// A simple way to check for HTML strings
 	// Prioritize #id over <tag> to avoid XSS via location.hash (#9521)
 	// Strict HTML recognition (#11290: must start with <)
-	rquickExpr = /^(?:(<[\w\W]+>)[^>]*|#([\w-]*))$/,
+	rquickExpr = /^(?:\s*(<[\w\W]+>)[^>]*|#([\w-]*))$/,
 
 	// Match a standalone tag
 	rsingleTag = /^<(\w+)\s*\/?>(?:<\/\1>|)$/,
@@ -928,11 +928,21 @@ var selector_hasDuplicate,
 
 jQuery.extend({
 	find: function( selector, context, results, seed ) {
-		var elem,
+		var elem, nodeType,
 			i = 0;
 
 		results = results || [];
 		context = context || document;
+
+		// Same basic safeguard as Sizzle
+		if ( !selector || typeof selector !== "string" ) {
+			return results;
+		}
+
+		// Early return if context is not an element or document
+		if ( (nodeType = context.nodeType) !== 1 && nodeType !== 9 ) {
+			return [];
+		}
 
 		if ( seed ) {
 			while ( (elem = seed[i++]) ) {
@@ -1001,7 +1011,7 @@ jQuery.extend({
 	expr: {
 		attrHandle: {},
 		match: {
-			boolean: /^(?:checked|selected|async|autofocus|autoplay|controls|defer|disabled|hidden|ismap|loop|multiple|open|readonly|required|scoped)$/i,
+			bool: /^(?:checked|selected|async|autofocus|autoplay|controls|defer|disabled|hidden|ismap|loop|multiple|open|readonly|required|scoped)$/i,
 			needsContext: /^[\x20\t\r\n\f]*[>+~]/
 		}
 	}
@@ -1561,13 +1571,9 @@ Data.prototype = {
 
 		// Handle: [ owner, { properties } ] args
 		} else {
-			// Support an expectation from the old data system where plain
-			// objects used to initialize would be set to the cache by
-			// reference, instead of having properties and values copied.
-			// Note, this will kill the connection between
-			// "this.cache[ unlock ]" and "cache"
+			// Fresh assignments by object are shallow copied
 			if ( jQuery.isEmptyObject( cache ) ) {
-				this.cache[ unlock ] = data;
+				jQuery.extend( this.cache[ unlock ], data );
 			// Otherwise, copy the properties one-by-one to the cache object
 			} else {
 				for ( prop in data ) {
@@ -1575,6 +1581,7 @@ Data.prototype = {
 				}
 			}
 		}
+		return cache;
 	},
 	get: function( owner, key ) {
 		// Either a valid cache is found, or will be created.
@@ -1616,7 +1623,7 @@ Data.prototype = {
 		return value !== undefined ? value : key;
 	},
 	remove: function( owner, key ) {
-		var i, name,
+		var i, name, camel,
 			unlock = this.key( owner ),
 			cache = this.cache[ unlock ];
 
@@ -1634,13 +1641,14 @@ Data.prototype = {
 				// This will only penalize the array argument path.
 				name = key.concat( key.map( jQuery.camelCase ) );
 			} else {
+				camel = jQuery.camelCase( key );
 				// Try the string as a key before any manipulation
 				if ( key in cache ) {
-					name = [ key ];
+					name = [ key, camel ];
 				} else {
 					// If a key with the spaces exists, use it.
 					// Otherwise, create an array by matching non-whitespace
-					name = jQuery.camelCase( key );
+					name = camel;
 					name = name in cache ?
 						[ name ] : ( name.match( core_rnotwhite ) || [] );
 				}
@@ -1658,7 +1666,9 @@ Data.prototype = {
 		);
 	},
 	discard: function( owner ) {
-		delete this.cache[ this.key( owner ) ];
+		if ( owner[ this.expando ] ) {
+			delete this.cache[ owner[ this.expando ] ];
+		}
 	}
 };
 
@@ -1711,7 +1721,7 @@ jQuery.fn.extend({
 						name = attrs[ i ].name;
 
 						if ( name.indexOf( "data-" ) === 0 ) {
-							name = jQuery.camelCase( name.substring(5) );
+							name = jQuery.camelCase( name.slice(5) );
 							dataAttr( elem, name, data[ name ] );
 						}
 					}
@@ -1967,7 +1977,7 @@ jQuery.fn.extend({
 	}
 });
 var nodeHook, boolHook,
-	rclass = /[\t\r\n]/g,
+	rclass = /[\t\r\n\f]/g,
 	rreturn = /\r/g,
 	rfocusable = /^(?:input|select|textarea|button)$/i;
 
@@ -2150,15 +2160,14 @@ jQuery.fn.extend({
 		isFunction = jQuery.isFunction( value );
 
 		return this.each(function( i ) {
-			var val,
-				self = jQuery(this);
+			var val;
 
 			if ( this.nodeType !== 1 ) {
 				return;
 			}
 
 			if ( isFunction ) {
-				val = value.call( this, i, self.val() );
+				val = value.call( this, i, jQuery( this ).val() );
 			} else {
 				val = value;
 			}
@@ -2273,7 +2282,7 @@ jQuery.extend({
 		if ( nType !== 1 || !jQuery.isXMLDoc( elem ) ) {
 			name = name.toLowerCase();
 			hooks = jQuery.attrHooks[ name ] ||
-				( jQuery.expr.match.boolean.test( name ) ? boolHook : nodeHook );
+				( jQuery.expr.match.bool.test( name ) ? boolHook : nodeHook );
 		}
 
 		if ( value !== undefined ) {
@@ -2312,7 +2321,7 @@ jQuery.extend({
 				propName = jQuery.propFix[ name ] || name;
 
 				// Boolean attributes get special treatment (#10870)
-				if ( jQuery.expr.match.boolean.test( name ) ) {
+				if ( jQuery.expr.match.bool.test( name ) ) {
 					// Set corresponding property to false
 					elem[ propName ] = false;
 				}
@@ -2396,7 +2405,7 @@ boolHook = {
 		return name;
 	}
 };
-jQuery.each( jQuery.expr.match.boolean.source.match( /\w+/g ), function( i, name ) {
+jQuery.each( jQuery.expr.match.bool.source.match( /\w+/g ), function( i, name ) {
 	var getter = jQuery.expr.attrHandle[ name ] || jQuery.find.attr;
 
 	jQuery.expr.attrHandle[ name ] = function( elem, name, isXML ) {
@@ -2977,6 +2986,12 @@ jQuery.event = {
 			event[ prop ] = originalEvent[ prop ];
 		}
 
+		// Support: Cordova 2.5 (WebKit) (#13255)
+		// All events should have a target; Cordova deviceready doesn't
+		if ( !event.target ) {
+			event.target = document;
+		}
+
 		// Support: Safari 6.0+, Chrome < 28
 		// Target should not be a text node (#504, #13143)
 		if ( event.target.nodeType === 3 ) {
@@ -3288,6 +3303,7 @@ jQuery.fn.extend({
 	}
 });
 var isSimple = /^.[^:#\[\.,]*$/,
+	rparentsprev = /^(?:parents|prev(?:Until|All))/,
 	rneedsContext = jQuery.expr.match.needsContext,
 	// methods guaranteed to produce a unique set when starting from a unique set
 	guaranteedUnique = {
@@ -3299,13 +3315,14 @@ var isSimple = /^.[^:#\[\.,]*$/,
 
 jQuery.fn.extend({
 	find: function( selector ) {
-		var self, matched, i,
-			l = this.length;
+		var i,
+			ret = [],
+			self = this,
+			len = self.length;
 
 		if ( typeof selector !== "string" ) {
-			self = this;
 			return this.pushStack( jQuery( selector ).filter(function() {
-				for ( i = 0; i < l; i++ ) {
+				for ( i = 0; i < len; i++ ) {
 					if ( jQuery.contains( self[ i ], this ) ) {
 						return true;
 					}
@@ -3313,15 +3330,14 @@ jQuery.fn.extend({
 			}) );
 		}
 
-		matched = [];
-		for ( i = 0; i < l; i++ ) {
-			jQuery.find( selector, this[ i ], matched );
+		for ( i = 0; i < len; i++ ) {
+			jQuery.find( selector, self[ i ], ret );
 		}
 
 		// Needed because $( selector, context ) becomes $( context ).find( selector )
-		matched = this.pushStack( l > 1 ? jQuery.unique( matched ) : matched );
-		matched.selector = ( this.selector ? this.selector + " " : "" ) + selector;
-		return matched;
+		ret = this.pushStack( len > 1 ? jQuery.unique( ret ) : ret );
+		ret.selector = this.selector ? this.selector + " " + selector : selector;
+		return ret;
 	},
 
 	has: function( target ) {
@@ -3347,14 +3363,16 @@ jQuery.fn.extend({
 	},
 
 	is: function( selector ) {
-		return !!selector && (
-			typeof selector === "string" ?
-				// If this is a positional/relative selector, check membership in the returned set
-				// so $("p:first").is("p:last") won't return true for a doc with two "p".
-				rneedsContext.test( selector ) ?
-					jQuery( selector, this.context ).index( this[ 0 ] ) >= 0 :
-					jQuery.filter( selector, this ).length > 0 :
-				this.filter( selector ).length > 0 );
+		return !!winnow(
+			this,
+
+			// If this is a positional/relative selector, check membership in the returned set
+			// so $("p:first").is("p:last") won't return true for a doc with two "p".
+			typeof selector === "string" && rneedsContext.test( selector ) ?
+				jQuery( selector ) :
+				selector || [],
+			false
+		).length;
 	},
 
 	closest: function( selectors, context ) {
@@ -3487,8 +3505,8 @@ jQuery.each({
 				jQuery.unique( matched );
 			}
 
-			// Reverse order for parents* and prev*
-			if ( name[ 0 ] === "p" ) {
+			// Reverse order for parents* and prev-derivatives
+			if ( rparentsprev.test( name ) ) {
 				matched.reverse();
 			}
 		}
@@ -3587,6 +3605,7 @@ var rxhtmlTag = /<(?!area|br|col|embed|hr|img|input|link|meta|param)(([\w:]+)[^>
 		option: [ 1, "<select multiple='multiple'>", "</select>" ],
 
 		thead: [ 1, "<table>", "</table>" ],
+		col: [ 2, "<table><colgroup>", "</colgroup></table>" ],
 		tr: [ 2, "<table><tbody>", "</tbody></table>" ],
 		td: [ 3, "<table><tbody><tr>", "</tr></tbody></table>" ],
 
@@ -3596,7 +3615,7 @@ var rxhtmlTag = /<(?!area|br|col|embed|hr|img|input|link|meta|param)(([\w:]+)[^>
 // Support: IE 9
 wrapMap.optgroup = wrapMap.option;
 
-wrapMap.tbody = wrapMap.tfoot = wrapMap.colgroup = wrapMap.caption = wrapMap.col = wrapMap.thead;
+wrapMap.tbody = wrapMap.tfoot = wrapMap.colgroup = wrapMap.caption = wrapMap.thead;
 wrapMap.th = wrapMap.td;
 
 jQuery.fn.extend({
@@ -3744,6 +3763,10 @@ jQuery.fn.extend({
 				parent = args[ i++ ];
 
 			if ( parent ) {
+				// Don't use the snapshot next if it has moved (#13810)
+				if ( next && next.parentNode !== parent ) {
+					next = this.nextSibling;
+				}
 				jQuery( this ).remove();
 				parent.insertBefore( elem, next );
 			}
@@ -3999,35 +4022,35 @@ jQuery.extend({
 	},
 
 	cleanData: function( elems ) {
-		var data, elem, type,
-			l = elems.length,
-			i = 0,
-			special = jQuery.event.special;
+		var data, elem, events, type, key, j,
+			special = jQuery.event.special,
+			i = 0;
 
-		for ( ; i < l; i++ ) {
-			elem = elems[ i ];
+		for ( ; (elem = elems[ i ]) !== undefined; i++ ) {
+			if ( Data.accepts( elem ) ) {
+				key = elem[ data_priv.expando ];
 
-			if ( jQuery.acceptData( elem ) ) {
+				if ( key && (data = data_priv.cache[ key ]) ) {
+					events = Object.keys( data.events || {} );
+					if ( events.length ) {
+						for ( j = 0; (type = events[j]) !== undefined; j++ ) {
+							if ( special[ type ] ) {
+								jQuery.event.remove( elem, type );
 
-				data = data_priv.access( elem );
-
-				if ( data ) {
-					for ( type in data.events ) {
-						if ( special[ type ] ) {
-							jQuery.event.remove( elem, type );
-
-						// This is a shortcut to avoid jQuery.event.remove's overhead
-						} else {
-							jQuery.removeEvent( elem, type, data.handle );
+							// This is a shortcut to avoid jQuery.event.remove's overhead
+							} else {
+								jQuery.removeEvent( elem, type, data.handle );
+							}
 						}
+					}
+					if ( data_priv.cache[ key ] ) {
+						// Discard any remaining `private` data
+						delete data_priv.cache[ key ];
 					}
 				}
 			}
-			// Discard any remaining `private` and `user` data
-			// One day we'll replace the dual arrays with a WeakMap and this won't be an issue.
-			// (Splices the data objects out of the internal cache arrays)
-			data_user.discard( elem );
-			data_priv.discard( elem );
+			// Discard any remaining `user` data
+			delete data_user.cache[ elem[ data_user.expando ] ];
 		}
 	},
 
@@ -4035,10 +4058,10 @@ jQuery.extend({
 		return jQuery.ajax({
 			url: url,
 			type: "GET",
-			dataType: "text",
+			dataType: "script",
 			async: false,
 			global: false,
-			success: jQuery.globalEval
+			"throws": true
 		});
 	}
 });
@@ -4093,10 +4116,8 @@ function cloneCopyEvent( src, dest ) {
 	// 1. Copy private data: events, handlers, etc.
 	if ( data_priv.hasData( src ) ) {
 		pdataOld = data_priv.access( src );
-		pdataCur = jQuery.extend( {}, pdataOld );
+		pdataCur = data_priv.set( dest, pdataOld );
 		events = pdataOld.events;
-
-		data_priv.set( dest, pdataCur );
 
 		if ( events ) {
 			delete pdataCur.handle;
@@ -4242,7 +4263,7 @@ function buildParams( prefix, obj, traditional, add ) {
 		add( prefix, obj );
 	}
 }
-if ( typeof module === "object" && typeof module.exports === "object" ) {
+if ( typeof module === "object" && module && typeof module.exports === "object" ) {
 	// Expose jQuery as module.exports in loaders that implement the Node
 	// module pattern (including browserify). Do not create the global, since
 	// the user will be storing it themselves locally, and globals are frowned
