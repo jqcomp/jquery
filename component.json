@@ -1,0 +1,15 @@
+{
+  "name": "jquery",
+  "description": "JavaScript library for DOM operations",
+  "homepage": "http://jquery.com",
+  "author": "jQuery Foundation and other contributors",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jquery/jquery.git"
+  },
+  "version": "1.8.0",
+  "main": "index.js",
+  "scripts": [
+    "index.js"
+  ]
+}
